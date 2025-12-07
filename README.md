@@ -6,30 +6,36 @@ Backend (Node.js + Express) e Frontend (HTML/CSS/JS) com autenticação Google O
 
 Frontend e backend servidos juntos em **uma única URL** no Render!
 
-## Deploy no Render
+## Deploy Rápido no Render
 
-### 1. Configurar Google OAuth
+### Método 1: Deploy Manual (Mais Simples)
 
-1. Acesse [Google Cloud Console](https://console.cloud.google.com/)
-2. Crie um novo projeto
-3. Ative a Google+ API
-4. Crie credenciais OAuth 2.0
-5. Adicione a URL autorizada:
-   - `https://seu-app.onrender.com/api/auth/google/callback`
+1. **Criar PostgreSQL:**
+   - [Render Dashboard](https://dashboard.render.com/) > New > PostgreSQL
+   - Name: `sessions-db`, Plan: Free
 
-### 2. Deploy
+2. **Criar Web Service:**
+   - New > Web Service > Conectar repositório
+   - Build: `cd backend && npm install`
+   - Start: `cd backend && npm start`
+   - Plan: Free
 
-1. Conecte seu repositório ao Render
-2. O Render detectará automaticamente o `render.yaml`
-3. Configure as variáveis de ambiente no dashboard:
-   - `GOOGLE_CLIENT_ID`
-   - `GOOGLE_CLIENT_SECRET`
-   - `GOOGLE_CALLBACK_URL`
+3. **Configurar variáveis** (veja DEPLOY.md)
 
-### 3. Atualizar Google OAuth
+### Método 2: Blueprint (Automático)
 
-Após o deploy, atualize no Google Cloud Console:
-- Authorized redirect URIs: `https://seu-app.onrender.com/api/auth/google/callback`
+1. Push para GitHub
+2. Render Dashboard > New > Blueprint
+3. Conectar repositório (detecta `render.yaml`)
+
+**Se der erro "No resources managed by YAML":** Use o Método 1 (Manual)
+
+### Configurar Google OAuth
+
+1. [Google Cloud Console](https://console.cloud.google.com/)
+2. Criar projeto > APIs & Services > Credentials
+3. OAuth 2.0 Client ID
+4. Redirect URI: `https://seu-app.onrender.com/api/auth/google/callback`
 
 ## 🛠️ Desenvolvimento Local
 

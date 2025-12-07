@@ -13,27 +13,42 @@
 
 ## Passo 2: Deploy no Render
 
-### Opção A: Deploy Automático (Recomendado)
+### Opção A: Deploy Manual (Recomendado - Mais Confiável)
+
+1. Acesse [Render Dashboard](https://dashboard.render.com/)
+
+2. **Crie o banco de dados primeiro:**
+   - Clique em **New** > **PostgreSQL**
+   - Name: `sessions-db`
+   - Database: `sessions`
+   - Plan: **Free**
+   - Clique em **Create Database**
+   - Aguarde a criação (2-3 minutos)
+
+3. **Crie o web service:**
+   - Clique em **New** > **Web Service**
+   - Conecte seu repositório GitHub
+   - Configure:
+     - Name: `fullstack-app`
+     - Runtime: **Node**
+     - Build Command: `cd backend && npm install`
+     - Start Command: `cd backend && npm start`
+     - Plan: **Free**
+
+4. **Configure as variáveis de ambiente** (veja Passo 3 abaixo)
+
+5. Clique em **Create Web Service**
+
+### Opção B: Deploy com Blueprint
 
 1. Faça push do código para GitHub
 2. Acesse [Render Dashboard](https://dashboard.render.com/)
 3. Clique em **New** > **Blueprint**
 4. Conecte seu repositório
-5. O Render detectará o `render.yaml` automaticamente
+5. O Render detectará o `render.yaml` ou `.render.yaml`
 6. Aguarde o deploy (5-10 minutos)
 
-### Opção B: Deploy Manual
-
-1. Acesse [Render Dashboard](https://dashboard.render.com/)
-2. Crie o banco de dados:
-   - **New** > **PostgreSQL**
-   - Name: `sessions-db`
-   - Plan: **Free**
-3. Crie o web service:
-   - **New** > **Web Service**
-   - Connect repository
-   - Build Command: `cd backend && npm install`
-   - Start Command: `cd backend && npm start`
+**Nota:** Se o Blueprint não funcionar, use a Opção A (Manual).
 
 ## Passo 3: Configurar Variáveis de Ambiente
 
