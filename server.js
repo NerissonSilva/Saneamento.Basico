@@ -1,138 +1,60 @@
-require('dotenv').config();
-const express = require('express');
-const cors = require('cors');
-const helmet = require('helmet');
-const compression = require('compression');
-const session = require('express-session');
-const passport = require('passport');
-const GoogleStrategy = require('passport-google-oauth20').Strategy;
-const pgSession = require('connect-pg-simple')(session);
-const { Pool } = require('pg');
-const path = require('path');
+import express from 'express';
+import cors from 'cors';
+import helmet from 'helmet';
+import compression from 'compression';
+import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import swaggerUi from 'swagger-ui-express';
+import swaggerSpec from './src/config/swagger.js';
+import authRoutes from './src/routes/auth.js';
+import saneamentoRoutes from './src/routes/saneamento.js';
+
+dotenv.config();
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Validate required environment variables
-const requiredEnvVars = ['GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET', 'GOOGLE_CALLBACK_URL'];
-const missingEnvVars = requiredEnvVars.filter(varName => !process.env[varName]);
-
-if (missingEnvVars.length > 0) {
-  console.error('❌ Missing required environment variables:', missingEnvVars.join(', '));
-  console.error('Please configure these in your Render dashboard or .env file');
-  process.exit(1);
-}
-
-// PostgreSQL connection pool
-let pool;
-if (process.env.DATABASE_URL) {
-  pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
-    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
-  });
-}
-
 // Middleware
-app.use(helmet({
-  contentSecurityPolicy: false // Permite inline scripts do frontend
-}));
+app.use(helmet({ contentSecurityPolicy: false }));
 app.use(compression());
 app.use(express.json());
-app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:8080',
-  credentials: true
-}));
+app.use(cors({ origin: process.env.FRONTEND_URL || 'http://localhost:5173', credentials: true }));
 
-// Serve static files from frontend
-app.use(express.static(path.join(__dirname, '../frontend')));
+// Swagger
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
-// Session configuration with PostgreSQL store
-const sessionConfig = {
-  secret: process.env.SESSION_SECRET || 'fallback-secret',
-  resave: false,
-  saveUninitialized: false,
-  cookie: {
-    secure: process.env.NODE_ENV === 'production',
-    maxAge: 24 * 60 * 60 * 1000
-  }
-};
-
-// Use PostgreSQL store if DATABASE_URL is available
-if (process.env.DATABASE_URL && pool) {
-  sessionConfig.store = new pgSession({
-    pool: pool,
-    tableName: 'session',
-    createTableIfMissing: true
+// Rotas API
+app.get('/api', (_req, res) => {
+  res.json({
+    message: 'API Saneamento Recife/PE',
+    version: '1.0.0',
+    docs: '/api-docs',
   });
-  console.log('✅ Using PostgreSQL session store');
-} else {
-  console.log('⚠️  Using MemoryStore (not recommended for production)');
-}
-
-app.use(session(sessionConfig));
-
-app.use(passport.initialize());
-app.use(passport.session());
-
-// Passport configuration
-passport.use(new GoogleStrategy({
-    clientID: process.env.GOOGLE_CLIENT_ID,
-    clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-    callbackURL: process.env.GOOGLE_CALLBACK_URL
-  },
-  (accessToken, refreshToken, profile, done) => {
-    return done(null, profile);
-  }
-));
-
-passport.serializeUser((user, done) => done(null, user));
-passport.deserializeUser((user, done) => done(null, user));
-
-console.log('✅ Google OAuth configured successfully');
-
-// API Routes
-app.get('/api', (req, res) => {
-  res.json({ message: 'API is running', status: 'ok' });
 });
 
-app.get('/api/health', (req, res) => {
+app.get('/api/health', (_req, res) => {
   res.json({ status: 'healthy', timestamp: new Date().toISOString() });
 });
 
-app.get('/api/auth/google',
-  passport.authenticate('google', { scope: ['profile', 'email'] })
-);
+app.use('/api/auth', authRoutes);
+app.use('/api/saneamento', saneamentoRoutes);
 
-app.get('/api/auth/google/callback',
-  passport.authenticate('google', { failureRedirect: '/?login=failed' }),
-  (req, res) => {
-    res.redirect('/?login=success');
-  }
-);
-
-app.get('/api/auth/user', (req, res) => {
-  if (req.isAuthenticated()) {
-    res.json({ user: req.user });
-  } else {
-    res.status(401).json({ error: 'Not authenticated' });
-  }
-});
-
-app.post('/api/auth/logout', (req, res) => {
-  req.logout((err) => {
-    if (err) return res.status(500).json({ error: 'Logout failed' });
-    res.json({ message: 'Logged out successfully' });
+// Servir frontend em produção
+if (process.env.NODE_ENV === 'production') {
+  const frontendPath = path.join(__dirname, '../frontend/dist');
+  app.use(express.static(frontendPath));
+  app.get('*', (_req, res) => {
+    res.sendFile(path.join(frontendPath, 'index.html'));
   });
-});
-
-// Serve frontend for all other routes (SPA fallback)
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, '../frontend/index.html'));
-});
+}
 
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`✅ Server running on port ${PORT}`);
-  console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`🌐 Frontend and Backend served together on same URL`);
-  console.log(`📁 Serving static files from: ${path.join(__dirname, '../frontend')}`);
+  console.log(`✅ Servidor rodando na porta ${PORT}`);
+  console.log(`📚 Docs: http://localhost:${PORT}/api-docs`);
 });
+
+export default app;
